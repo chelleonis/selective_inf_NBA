@@ -1,0 +1,30 @@
+---
+title: "selective inference note"
+author: "Allen Li"
+date: "3/26/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(selectiveInference)
+library(glmnet)
+```
+
+https://hoopshype.com/2017/08/20/nba-2k-ratings-how-they-are-determined-and-why-players-care-so-much-about-them/
+
+fucntions - These compute p-values and selection intervals
+
+forwardstepinf(x,y) forward  stepwise regression (AIC stoppign rule)
+fixedLassoinf(x,y) fixed lambda lasso 
+larInf(x,y) least angle regression
+
+focus on lasso as a selection procedure
+
+
+False discovery rates??? FDR - benjamini and hochberg
+
+appropriate intermediate way of controlling for the inflated type I error in large
+studies. If one uses regular α-level testing in order to tag R discoveries (where
+a discovery is a rejected null hypothesis) among the m tested, then the number
+of false discoveries being made, denoted by V , may become very high.

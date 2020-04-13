@@ -1,6 +1,7 @@
 #data loading and cleaning
 library(nbastatR)
 library(dplyr)
+library(future)
 
 library(tidyr)
 
@@ -14,7 +15,7 @@ twoK <- read.csv("C:/Users/typer321/Desktop/nba2k ratings.csv") %>%
   rename(namePlayer = Player) %>% mutate(Player = gsub("’","'", namePlayer)) %>% 
   group_by(Pos.) %>% separate(Height, c('feet', 'inches'), "'", convert = TRUE) %>% 
   mutate(inches = gsub("\"","", inches)) %>% mutate(inches = as.integer(inches)) %>%
-  mutate(cm_height = (12*feet + inches)*2.54/100) %>% select(-c(feet,inches))
+  mutate(m_height = (12*feet + inches)*2.54/100) %>% select(-c(feet,inches))
 
 
 players_careers(players = twoK$namePlayer, modes = c("Totals","PerGame"))
@@ -68,7 +69,7 @@ sift_data <- function(role_names,data_vec) {
 #need to change these titels lol
 set1 <- dataPlayerSeasonTotalsRegularSeason %>% filter(slugSeason == "2018-19") %>%
   dplyr::select(-one_of("slugSeason","slugTeam","idTeam","urlNBAAPI","idPlayer","slugSeasonType", "isRookie",
-                        "numberPlayerSeason")) %>%
+                        "numberPlayerSeason","fgaPerGame", "fg3aPerGame", "ftaPerGame")) %>%
   group_by(namePlayer) %>%
   summarise_all(mean)
 
@@ -79,7 +80,8 @@ set2 <- dataPlayerSeasonTotalsPostSeason %>% filter(slugSeason == "2018-19") %>%
   summarise_all(mean)
 
 set3 <- dataPlayerCareerTotalsRegularSeason %>%
-  dplyr::select(-one_of("urlNBAAPI","idPlayer","slugSeasonType")) %>%
+  dplyr::select(-one_of("urlNBAAPI","idPlayer","slugSeasonType","idTeam", 
+                        "fgaPerGame", "fg3aPerGame","ftaPerGame")) %>% 
   group_by(namePlayer) %>%
   summarise_all(mean)
 
@@ -107,9 +109,20 @@ shipped_to_xqc <- function(position,set1,set2,set3,set4) {
 
 library(mice)
 
+any_imputers <- function(pos_data) {
+  temp_imp <- mice(pos_data, m=10, printFlag=FALSE, maxit = 30, seed=2525, method = "cart")
+  simpyfit = with(data=temp_imp, exp = lm(twoK_score ~ ptsPerGame))
+  combFit = pool(simpyfit)
+  pos_data_full = complete(temp_imp, 2)
+  return(pos_data_full) 
+}
+
 C_data <- shipped_to_xqc(C,set1,set2,set3,set4) %>% filter(gp > 5 & !is.na(gp)) %>%
-  dplyr::select(-one_of("Player","gp_regcar","gs_regcar","gs"))
-#C_data[is.na(C_data)] <- 0
+  dplyr::select(-one_of("Player","fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
+  mutate(start_pct = gs/gp) %>%
+  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
+  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
+C_data[is.na(C_data)] <- 0
 
 impy = mice(C_data, m=10, printFlag=FALSE, maxit = 30, seed=2525, method = "cart")
 impyfit = with(data=impy, exp = lm(twoK_score ~ ptsPerGame))
@@ -118,69 +131,48 @@ combFit = pool(impyfit)
 C_data_full = complete(impy, 2) %>% mutate(cm_height = cm_height/100)%>%
   dplyr::select(-one_of("fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar"))
 
-PF_data <- shipped_to_xqc(PF,set1,set2,set3,set4)
-impy2 = mice(PF_data, m=10, printFlag=FALSE, maxit = 30, seed=2525, method = "cart")
-impyfit2 = with(data=impy2, exp = lm(twoK_score ~ ptsPerGame))
+PF_data <- shipped_to_xqc(PF,set1,set2,set3,set4) %>%
+  dplyr::select(-one_of("Player","fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
+  mutate(start_pct = gs/gp) %>%
+  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
+  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
+  filter(!is.na(fgmPerGame))
+PF_data[is.na(PF_data)] <- 0
+
+impy2 = mice(PF_data, m=10, printFlag=FALSE, maxit = 30, seed=2525, method = "norm")
+
+impyfit2 = with(data=impy2, exp = lm(twoK_score ~ ptsPerGame + m_height))
 combFit = pool(impyfit2)
 
-PF_data_full = complete(impy, 2) %>% mutate(cm_height = cm_height/100) 
+PF_data_full = complete(impy2, 2) %>% dplyr::select(-c("Player"))
 
-SF_data <- shipped_to_xqc(SF,set1,set2,set3,set4)
+SF_data <- shipped_to_xqc(SF,set1,set2,set3,set4) %>%
+  dplyr::select(-one_of("Player","fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
+  mutate(start_pct = gs/gp) %>%
+  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
+  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
+  filter(!is.na(fgmPerGame))
 SF_data[is.na(SF_data)] <- 0
 
-SG_data <- shipped_to_xqc(SG,set1,set2,set3,set4)
-SG_data[is.na(SG_data)] <- 0
 
-PG_data <- shipped_to_xqc(PG,set1,set2,set3,set4)
-PG_data[is.na(PG_data)] <- 0
+SF_data_full <- any_imputers(SF_data)
 
-
-
-overall_data_test <- inner_join(twoK, set1, by = "namePlayer") %>% 
-  rename(twoK_score = OVR) %>%
-  dplyr::select(-one_of("Pos.","Rank","Team","Build","namePlayer","Height"))
-
-#need to do stuff with lambda
-
-#X = matrix(rnorm(n * p), n, p)  # Design Matrix
-
-overall_data_test[is.na(overall_data_test)] <- 0
+SG_data <- shipped_to_xqc(SG,set1,set2,set3,set4) %>%
+  dplyr::select(-one_of("Player","fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
+  mutate(start_pct = gs/gp) %>%
+  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
+  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
+  filter(!is.na(fgmPerGame))
 
 
+SG_data_full <- any_imputers(SG_data)
 
+PG_data <- shipped_to_xqc(PG,set1,set2,set3,set4) %>%
+  dplyr::select(-one_of("Player","fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
+  mutate(start_pct = gs/gp) %>%
+  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
+  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
+  filter(!is.na(fgmPerGame))
 
+PG_data_full <- any_imputers(PG_data)
 
-#filter players that have played more than a certain amount of minutes
-#defunct code, use the function above
-C_career <- players_careers(players = C$Player,
-                            modes = c("Totals", "PerGame")) #career data and season data
-fix_C <- which(C$Player %notin% unique(C_career$namePlayer))
-C$Player[fix_C] #"Mohamed Bamba"  "Tony Bradley Jr." "Harry Giles"    
-
-PF_career <- players_careers(players = PF$Player,
-                             modes = c("Totals", "PerGame")) #career data and season data
-fix_PF <- which(PF$Player %notin% unique(PF_career$namePlayer))
-PF$Player[fix_PF]
-#[1] "PJ Washington"    "T.J. Leaf"        "Robert Williams"  "Juan Hernangomez"
-#[5] "Devontae Cacok"   "Kyle Alexander"   "B.J. Johnson"    
-
-PG_career <- players_careers(players = PG$Player,
-                             modes = c("Totals", "PerGame")) #career data and season data
-fix_PG <- which(PG$Player %notin% unique(PG_career$namePlayer))
-PG$Player[fix_PG] #rename steph xd
-
-SF_career <- players_careers(players = SF$Player,
-                             modes = c("Totals", "PerGame")) #career data and season data
-fix_SF <- which(SF$Player %notin% unique(SF_career$namePlayer))
-SF$Player[fix_SF]
-#[1] "Marcus Morris Sr" "James Ennis"      "Kevin Knox"       "Danuel House"    
-#[5] "Cameron Reddish"  "C.J. Miles"       "Wesley Iwundu"    "Juan Toscano"    
-#[9] "Vince Edwards"  
-
-SG_career <- players_careers(players = SG$Player,
-                             modes = c("Totals", "PerGame")) #career data and season data
-fix_SG <- which(SG$Player %notin% unique(SG_career$namePlayer))
-SG$Player[fix_SG]
-#[1] "C.J. McCollum"         "Donte Divincenzo"      "Jordan Mcrae"         
-#[4] "Sviatoslav Mykhailiuk" "Melvin Frazier"        "P.J. Dozier"          
-#[7] "Lugentz Dort"        

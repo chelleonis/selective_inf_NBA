@@ -39,57 +39,86 @@ SG_las <- howdy_partner(SG_data)
 PG_las <- howdy_partner(PG_data)
 
 
-  #Forward Selection
-no_height_test <- PF_data_full %>% dplyr::select(-c("m_height")) %>%
-  mutate(start_pct = gs/gp) %>%
-  mutate(start_pct = gs_regcar/gp_regcar) %>%
-  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar"))
-
+#Forward Selection
 
 susume <- function (pos_data) {
   X = as.matrix(sapply(pos_data[,-1],as.numeric))
   Y = as.matrix(pos_data[,1], drop = FALSE)
+  X <- scale(X,TRUE,TRUE)
+  Y <- scale(Y,FALSE,TRUE)
   fsfit <- fs(X,Y)
   out   <- fsInf(fsfit)
   plot(fsfit)
   return(out)
 }
 
+C_fwd <- susume(C_data)
+PF_fwd <- susume(PF_data)
+SF_fwd <- susume(SF_data)
+SG_fwd <- susume(SG_data)
+PG_fwd <- susume(PG_data)
+
+X = as.matrix(sapply(SG_data[,-1],as.numeric))
+Y = as.matrix(SG_data[,1], drop = FALSE)
+X <- scale(X,TRUE,TRUE)
+Y <- scale(Y,FALSE,TRUE)
+fsfitty <- fs(X,Y)
+out   <- fsInf(fsfitty)
+
+n = length(Y) #number of observations
+p = dim(X)[2] #number of covariates
+lamb = sigma * sqrt(2.05 * log(p)/n) #tuning param
+
+betas = coef(out, s = lamb/n, mode = "lambda")
+
+out2 = fixedLassoInf(X, Y, betas, lamb/n, sigma=sigma)
+out2
+
+
+#lawr
+#Least Angle Regression with p-value correction(?)
+
+larry <- function (pos_data) {
+  X = as.matrix(sapply(pos_data[,-1],as.numeric))
+  Y = as.matrix(pos_data[,1], drop = FALSE)
+  X <- scale(X,TRUE,TRUE)
+  Y <- scale(Y,FALSE,TRUE)
+  larfit <- lar(X,Y)
+  out   <- larInf(larfit)
+  plot(larfit)
+  return(out)
+}
+
+C_lar <- larry(C_data)
+PF_lar <- larry(PF_data)
+SF_lar <- larry(SF_data)
+SG_lar <- larry(SG_data)
+PG_lar <- larry(PG_data)
 
 
 
-#
 
+## as above, but use lar function instead to get initial 
+## lasso fit (should get same results)
+lfit = lar(X,Y)
 
-#Least Angle Regression
-larfit = lar(X,Y)
-CI_3 = larInf(larfit)
+beta = coef(lfit, s=lamb/n, mode="lambda")
 
-fixedLassoInf(X,Y,grid_range)
+out2 = fixedLassoInf(X, Y, beta, lamb, sigma=sigma)
 
+out2
 
 
 #P-value correction:
 
 
-#
-
-
-#forwardstepinf(x,y) forward  stepwise regression (AIC stoppign rule)
-#fixedLassoinf(x,y) fixed lambda lasso 
-#larInf(x,y)
-
-#fsfit (foward sleection)
-
-
-OLS_step <- lm(twoK_score ~. , data = C_data_full)
+OLS_step <- lm(twoK_score ~. -1, data = C_data)
+summary(OLS_step)
 p_values <- coef(summary(OLS_step))[,"Pr(>|t|)"]
 
-p.adjust(p_values, method = p.adjust.methods, n = length(p))
+p.adjust(p_values, method = p.adjust.methods)
 
-fsfit <- fs(X_2,Y)
-out   <- fsInf(fsfit)
-
-plot(fsfit)
-
+OLS_step <- lm(twoK_score ~. -1, data = C_data)
+summary(OLS_step)
+p_values <- coef(summary(OLS_step))[,"Pr(>|t|)"]
 

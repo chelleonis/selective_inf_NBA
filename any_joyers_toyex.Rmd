@@ -7,7 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(jtools)
 library(selectiveInference)
+load("clean_data.RData")
+library(kableExtra)
+
 ```
 
 Toy example yo
@@ -15,7 +19,7 @@ Toy example yo
 #selective inferece toy example rofl
 set.seed(15)
 n     <- 500
-p     <- 10
+p     <- 100
 x     <- matrix(rnorm(n*p),n,p)
 x[,2] <- x[,1] 
 x[,4] <- x[,3]
@@ -38,10 +42,48 @@ cor(x[,3],x[,4])
 
 fsfit <- fs(x,y)
 out   <- fsInf(fsfit)
+out
 
 plot(fsfit)
+```
 
+```{R}
+#data setup
+n     <- 500
+p     <- 100
+x     <- matrix(rnorm(n*p),n,p)
+x[,2] <- x[,1] 
+x[,4] <- x[,3]
+b     <- rep(0,p)
+b[1]  <- 1
+b[4]  <- 1
+x = scale(x, TRUE, TRUE) # Standardize X
+y   <- drop(x %*% b + rnorm(n))
+x[,2] <- x[,1] + rnorm(n,0,0.1) 
+x[,4] <- x[,3] + rnorm(n,0,0.1)
+
+lamb = sigma * sqrt(2.05 * log(p)/n) # Lasso Tuning parameter
+mod = glmnet(x = x, y = y,intercept = FALSE) # Fit the lasso
+beta_hat = coef(mod, x = x, y = y, s = lamb, exact = TRUE)[-1] # Coef. Estimates
+
+CI = fixedLassoInf(y = y, x = x, sigma = 1, beta = beta_hat, lambda = lamb) # Selective Inference - Note the Tuning Paramter!
+CI
+
+fsfit <- fs(x,y)
+out <- fsInf(fsfit)
+out
 
 ```
 
+```{R}
+  X = as.matrix(sapply(PF_data[,-1],as.numeric))
+  Y = as.matrix(PF_data[,1], drop = FALSE)
+OLS_step <- lm(Y ~ X- 1)
+summ(OLS_step)
+
+summary(OLS_step)
+
+hi <- cor(X,X)
+
+```
 

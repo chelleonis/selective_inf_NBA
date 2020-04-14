@@ -30,7 +30,7 @@ howdy_partner <- function(pos_data) {
 
 C_las <- howdy_partner(C_data)
 
-PF_las <- howdy_partner(PF_data)
+PF_las <- howdy_partner(PF_data_2)
 
 SF_las <- howdy_partner(SF_data)
 
@@ -52,14 +52,20 @@ susume <- function (pos_data) {
   return(out)
 }
 
-C_fwd <- susume(C_data)
-PF_fwd <- susume(PF_data)
+C_fwd <- susume(C_data_2)
+
+PF_fwd <- susume(PF_data_2)
+
+pp_tenshi <- p.adjust(PF_lar$pv, method = "BH")
+
 SF_fwd <- susume(SF_data)
 SG_fwd <- susume(SG_data)
+
 PG_fwd <- susume(PG_data)
 
-X = as.matrix(sapply(SG_data[,-1],as.numeric))
-Y = as.matrix(SG_data[,1], drop = FALSE)
+X = as.matrix(sapply(PF_data[,-1],as.numeric))
+Y = as.matrix(PF_data[,1], drop = FALSE)
+
 X <- scale(X,TRUE,TRUE)
 Y <- scale(Y,FALSE,TRUE)
 fsfitty <- fs(X,Y)
@@ -89,12 +95,21 @@ larry <- function (pos_data) {
   return(out)
 }
 
-C_lar <- larry(C_data)
-PF_lar <- larry(PF_data)
+C_lar <- larry(C_data_2)
+
+PF_lar <- larry(PF_data_2)
+
+p.adjust(PF_lar$pv, method = p.adjust.methods)
+
+
 SF_lar <- larry(SF_data)
+
 SG_lar <- larry(SG_data)
+
 PG_lar <- larry(PG_data)
 
+
+p.adjust(C_lar$pv, method = 'fdr') #copy for the rest of the roles lol
 
 
 
@@ -110,7 +125,9 @@ out2
 
 
 #P-value correction:
+library(jtools)
 
+C_data_2 <- C_data %>% dplyr::select(-c("m_height"))
 
 OLS_step <- lm(twoK_score ~. -1, data = C_data)
 summary(OLS_step)

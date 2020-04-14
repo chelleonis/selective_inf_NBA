@@ -18,6 +18,8 @@ twoK <- read.csv("C:/Users/typer321/Desktop/nba2k ratings.csv") %>%
   mutate(m_height = (12*feet + inches)*2.54/100) %>% select(-c(feet,inches))
 
 
+write.csv(twoK, "C:/Users/typer321/Desktop/lol.csv")
+
 players_careers(players = twoK$namePlayer, modes = c("Totals","PerGame"))
 
 strat <- group_split(twoK) 
@@ -27,6 +29,8 @@ PF <- strat[[2]]
 PG <- strat[[3]] 
 SF <- strat[[4]] 
 SG <- strat[[5]] 
+
+top_5 <- twoK %>% filter(Rank < 6)
 
 #generate career data
 
@@ -107,6 +111,16 @@ shipped_to_xqc <- function(position,set1,set2,set3,set4) {
   return(baka)
 }
 
+small_data <- shipped_to_xqc(top_5,set1,set2,set3,set4) %>%
+  dplyr::select(-one_of("fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
+  mutate(start_pct = gs/gp) %>%
+  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
+  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar"))
+
+  small_data[is.na(small_data)] <- 0
+  
+write.csv(small_data, "C:/Users/typer321/Desktop/lollerc.csv")
+
 library(mice)
 
 any_imputers <- function(pos_data) {
@@ -151,7 +165,9 @@ SF_data <- shipped_to_xqc(SF,set1,set2,set3,set4) %>%
   mutate(start_pct = gs/gp) %>%
   mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
   dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
+  mutate(twoK_score = twoK_score/100) %>%
   filter(!is.na(fgmPerGame))
+
 SF_data[is.na(SF_data)] <- 0
 
 
@@ -168,11 +184,7 @@ SG_data <- shipped_to_xqc(SG,set1,set2,set3,set4) %>%
 SG_data_full <- any_imputers(SG_data)
 
 PG_data <- shipped_to_xqc(PG,set1,set2,set3,set4) %>%
-  dplyr::select(-one_of("Player","fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar")) %>%
-  mutate(start_pct = gs/gp) %>%
-  mutate(start_pct_regcar = gs_regcar/gp_regcar) %>%
-  dplyr::select(-c("gp","gs","gs_regcar","gp_regcar")) %>%
-  filter(!is.na(fgmPerGame))
+  dplyr::select(-one_of("fg2mPerGame","fg2aPerGame","fg2mPerGame_regcar","fg2aPerGame_regcar"))
 
 PG_data_full <- any_imputers(PG_data)
 

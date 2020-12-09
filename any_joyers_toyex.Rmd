@@ -1,5 +1,5 @@
 ---
-title: "joy"
+title: "Class Toy Example"
 author: "Allen Li"
 date: "4/10/2020"
 output: html_document

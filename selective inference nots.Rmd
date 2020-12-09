@@ -1,5 +1,5 @@
 ---
-title: "selective inference note"
+title: "selective inference notes (defunct)"
 author: "Allen Li"
 date: "3/26/2020"
 output: pdf_document

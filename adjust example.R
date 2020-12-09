@@ -1,3 +1,4 @@
+#testing some functions (tangential to main analysis)
 
 require(graphics)
 

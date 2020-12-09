@@ -1,5 +1,6 @@
 #analysis step:
 #load in all the data from initial analysis
+#Allen Li
 
 library(selectiveInference)
 library(glmnet)
@@ -30,7 +31,7 @@ howdy_partner <- function(pos_data) {
 
 C_las <- howdy_partner(C_data)
 
-PF_las <- howdy_partner(PF_data_2)
+PF_las <- howdy_partner(PF_data )
 
 SF_las <- howdy_partner(SF_data)
 
@@ -44,17 +45,15 @@ PG_las <- howdy_partner(PG_data)
 susume <- function (pos_data) {
   X = as.matrix(sapply(pos_data[,-1],as.numeric))
   Y = as.matrix(pos_data[,1], drop = FALSE)
-  X <- scale(X,TRUE,TRUE)
-  Y <- scale(Y,FALSE,TRUE)
   fsfit <- fs(X,Y)
   out   <- fsInf(fsfit)
   plot(fsfit)
   return(out)
 }
 
-C_fwd <- susume(C_data_2)
+C_fwd <- susume(C_data)
 
-PF_fwd <- susume(PF_data_2)
+PF_fwd <- susume(PF_data)
 
 pp_tenshi <- p.adjust(PF_lar$pv, method = "BH")
 
@@ -87,17 +86,15 @@ out2
 larry <- function (pos_data) {
   X = as.matrix(sapply(pos_data[,-1],as.numeric))
   Y = as.matrix(pos_data[,1], drop = FALSE)
-  X <- scale(X,TRUE,TRUE)
-  Y <- scale(Y,FALSE,TRUE)
   larfit <- lar(X,Y)
   out   <- larInf(larfit)
   plot(larfit)
   return(out)
 }
 
-C_lar <- larry(C_data_2)
+C_lar <- larry(C_data)
 
-PF_lar <- larry(PF_data_2)
+PF_lar <- larry(PF_data)
 
 p.adjust(PF_lar$pv, method = p.adjust.methods)
 
@@ -131,6 +128,9 @@ C_data_2 <- C_data %>% dplyr::select(-c("m_height"))
 
 OLS_step <- lm(twoK_score ~. -1, data = C_data)
 summary(OLS_step)
+
+confint(OLS_step)
+
 p_values <- coef(summary(OLS_step))[,"Pr(>|t|)"]
 
 p.adjust(p_values, method = p.adjust.methods)

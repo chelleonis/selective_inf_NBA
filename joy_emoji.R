@@ -1,4 +1,4 @@
-#selective inferece toy example rofl
+#selective inferece toy example
 
 library(selectiveInference)
 

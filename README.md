@@ -1,2 +1,5 @@
 # selective_inf_NBA
-lol
+
+Selective Inference Project on NBA data
+
+Comparing NBA2k overall scores with key statistics of players
